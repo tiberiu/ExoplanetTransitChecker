@@ -20,6 +20,7 @@ class BackendThread(threading.Thread):
 
         self.start_time = 0
         self.stats = {}
+        self.kill_signal = False
 
     def set_frontend_thread(self, frontend_thread):
         self.frontend_thread = frontend_thread
@@ -63,6 +64,12 @@ class BackendThread(threading.Thread):
                 result = self.execute_job(self.job)
                 self.frontend_thread.on_backend_job_done(result)
                 self.clear_requested_job()
+
+            if self.kill_signal:
+                break
+
+    def request_kill(self):
+        self.kill_signal = True
 
     def request_job(self, request):
         with self.job_lock:

@@ -17,4 +17,7 @@ if __name__ == "__main__":
 
     frontend_thread.join()
 
+    backend_thread.request_kill()
+    backend_thread.join()
+
     sys.exit()

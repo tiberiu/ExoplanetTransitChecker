@@ -49,8 +49,8 @@ class TransitFiltersWidget(QWidget):
         self.max_mag_input = InputWidget("Max Magnitude", "10", QDoubleValidator(0, 99, 2))
         self.min_dec_input = InputWidget("Min Declination (deg)", "", QDoubleValidator(-90, 90, 3))
         self.max_dec_input = InputWidget("Max Declination (deg)", "", QDoubleValidator(-90, 90, 3))
-        self.min_altitude_input = InputWidget("Min Altitude (deg)", "", QDoubleValidator(-90, 90, 3))
-        self.max_sun_altitude_input = InputWidget("Max Sun Altitude (deg)", "", QDoubleValidator(-90, 90, 3))
+        self.min_altitude_input = InputWidget("Min Altitude (deg)", "20", QDoubleValidator(-90, 90, 3))
+        self.max_sun_altitude_input = InputWidget("Max Sun Altitude (deg)", "-5", QDoubleValidator(-90, 90, 3))
 
         self.refresh_button = QPushButton("Refresh")
         self.refresh_button.clicked.connect(self.refresh_pressed)
