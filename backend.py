@@ -181,8 +181,25 @@ class BackendThread(threading.Thread):
                 self.add_stat("Exoplanet Added", 1)
                 exoplanets.append({"exoplanet_details": exoplanet, "transits": transits, "alt_graph": alt_graph})
 
+        exoplanets = self.sort_exoplanets(exoplanets, job["filters"]["order"])
+
         print("Backend job done")
+
         return {"exoplanets": exoplanets, "sun_alt_graph": sun_alt_graph, "start_date": job["start_date"], "end_date": job["end_date"]}
+
+    def sort_exoplanets(self, exoplanets, order):
+        cmp = None
+        print(exoplanets)
+        if order == "Magnitude":
+            cmp = lambda item: item["exoplanet_details"]["mag"]
+        elif order == "Transit depth":
+            cmp = lambda item: 1 - item["exoplanet_details"]["transit_dv"]
+        else:
+            print("No sorting")
+            return exoplanets
+
+        exoplanets = sorted(exoplanets, key=cmp)
+        return exoplanets
 
     def apply_exoplanet_filters(self, exoplanet_details, observer, filters):
         # filter dec

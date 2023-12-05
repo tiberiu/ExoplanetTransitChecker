@@ -1,6 +1,6 @@
 from PyQt6 import QtCore
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QLineEdit, QPushButton
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QLineEdit, QPushButton, QComboBox
 from PyQt6.QtGui import QIntValidator,QDoubleValidator
 
 class InputWidget(QWidget):
@@ -70,6 +70,18 @@ class TransitFiltersWidget(QWidget):
         layout.addWidget(self.min_altitude_input)
         layout.addWidget(self.max_sun_altitude_input)
 
+        self.order_layout = QHBoxLayout()
+
+        self.order_layout.addWidget(QLabel("Ordering"))
+
+        self.ordering_widget = QComboBox()
+        self.ordering_widget.addItem("Magnitude")
+        self.ordering_widget.addItem("Transit depth")
+        self.ordering_widget.setContentsMargins(10, 10, 10, 50)
+        self.order_layout.addWidget(self.ordering_widget)
+        self.order_layout.setContentsMargins(0, 10, 10, 10)
+
+        layout.addLayout(self.order_layout)
         layout.addWidget(self.refresh_button)
 
         self.setLayout(layout)
@@ -103,6 +115,8 @@ class TransitFiltersWidget(QWidget):
             data["min_altitude"] = self.min_altitude_input.get_float(0)
         if self.max_sun_altitude_input.get_text():
             data["sun_max_altitude"] = self.max_sun_altitude_input.get_float(0)
+
+        data["order"] = self.ordering_widget.currentText()
 
         return data
 
