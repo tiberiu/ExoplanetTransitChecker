@@ -8,6 +8,7 @@ from matplotlib.ticker import Formatter
 import numpy as np
 
 import datetime
+import pytz
 
 class TimeFormatter(Formatter):
     def __init__(self, start_date):
@@ -15,7 +16,6 @@ class TimeFormatter(Formatter):
 
     def __call__(self, x, pos):
         date = self.start_date + datetime.timedelta(minutes=int(x))
-        date = date.replace(tzinfo=datetime.timezone.utc).astimezone()
         return date.strftime("%H:%M")
 
 class TransitPlotWidget(FigureCanvasQTAgg):
@@ -34,7 +34,7 @@ class TransitPlotWidget(FigureCanvasQTAgg):
 
         return color
 
-    def create_plot(self, transit_data, sun_alt_graph, start_date, end_date):
+    def create_plot(self, transit_data, sun_alt_graph, start_date, end_date, observer_tz):
         x = transit_data["alt_graph"]["x"]
         y = transit_data["alt_graph"]["y"]
         transit_list = transit_data["transits"]
@@ -49,7 +49,9 @@ class TransitPlotWidget(FigureCanvasQTAgg):
             date = start_date + datetime.timedelta(minutes=i)
             in_transit = False
             for t in transit_list:
-                if t["start"] < date and date < t["end"]:
+                transit_start_local = t["start"].replace(tzinfo=pytz.utc).astimezone(start_date.tzinfo)
+                transit_end_local = t["end"].replace(tzinfo=pytz.utc).astimezone(start_date.tzinfo)
+                if transit_start_local < date and date < transit_end_local:
                     in_transit = True
                     break
 
@@ -59,7 +61,7 @@ class TransitPlotWidget(FigureCanvasQTAgg):
                 colors.append("blue")
 
             patches.append(Rectangle((i, -90), 1, 180))
-            patch_colors.append(self.get_sky_color(0.5 - sun_alt_graph["y"][i])[1] * 0.5)
+            patch_colors.append(1 - self.get_sky_color(sun_alt_graph["y"][i])[1])
 
         sky_color = LinearSegmentedColormap.from_list("sky", [(173 / 255, 216 / 255, 230 / 255), (5 / 255, 5 / 255, 35 / 255)])
         patch_collection = PatchCollection(patches, cmap=sky_color)
@@ -69,7 +71,6 @@ class TransitPlotWidget(FigureCanvasQTAgg):
         self.axes.add_collection(patch_collection)
         self.axes.set_ylim(0, 90)
         self.axes.set_xlim(0, 1440)
-        # self.axes.set_xticklabels([1, 2, 3, 4, 5, 6, 7])
         self.axes.xaxis.set_major_formatter(TimeFormatter(start_date))
         self.axes.xaxis.set_ticks(np.arange(0, 1440, 60))
         self.axes.tick_params(axis='x', labelrotation=45)

@@ -17,8 +17,7 @@ class DaySelectorWidget(QWidget):
         self.next_button = QPushButton("Next Day")
         self.next_button.setFixedWidth(100)
 
-        self.selected_date = datetime.datetime.now().astimezone()
-        self.selected_date = self.selected_date.replace(hour=12, minute=0, second=0, microsecond=0)
+        self.selected_date = datetime.datetime.now()
 
         self.day_label = QLabel(self.selected_date.strftime("%d %B %Y"))
         self.day_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
@@ -36,8 +35,7 @@ class DaySelectorWidget(QWidget):
         self.setLayout(layout)
 
     def get_selected_date(self):
-        utc_naive_date = self.selected_date.astimezone(datetime.timezone.utc).replace(tzinfo=None)
-        return utc_naive_date
+        return self.selected_date
 
     def prev_day(self):
         self.selected_date = self.selected_date - datetime.timedelta(days=1)

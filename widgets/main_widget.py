@@ -46,20 +46,6 @@ class MainWidget(QWidget):
 
         self.transit_selector_widget.update_info_data({'progress': 0, 'info': "Searching"})
 
-        """
-        request = {"start_date": start_date, "end_date": end_date,
-                   "observer": {
-                        'lon': 44.49239,
-                        'lat': 26.02435,
-                        'height' : 75,
-                   },
-                   "filters": {
-                       "min_altitude": 0,
-                       "sun_max_altitude": -5,
-                       "dec": [-10, 50],
-                       "mag": 10
-                   }}
-        """
         request = {
             "start_date": start_date,
             "end_date": end_date,

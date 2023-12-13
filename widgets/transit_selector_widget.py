@@ -51,7 +51,7 @@ class TransitSelectorWidget(QWidget):
         self.transit_list_widget.clearTransits()
 
         for body_transition in data["exoplanets"]:
-            self.transit_list_widget.addTransit(body_transition, data["sun_alt_graph"], data["start_date"], data["end_date"])
+            self.transit_list_widget.addTransit(body_transition, data["sun_alt_graph"], data["start_date"], data["end_date"], data["observer_timezone"])
 
     def get_selected_date(self):
         return self.day_selector_widget.get_selected_date()

@@ -7,11 +7,14 @@ from widgets.transit_plot_widget import TransitPlotWidget
 import datetime
 
 class TransitListWidgetItem(QWidget):
-    def __init__(self, transit_data, sun_alt_graph, start_date, end_date, *args, **kwargs):
+    def __init__(self, transit_data, sun_alt_graph, start_date, end_date, observer_tz, *args, **kwargs):
         super(TransitListWidgetItem, self).__init__(*args, **kwargs)
 
+        local_start_date = start_date.replace(tzinfo=datetime.timezone.utc).astimezone(observer_tz)
+        local_end_date = end_date.replace(tzinfo=datetime.timezone.utc).astimezone(observer_tz)
+
         self.pltWidget = TransitPlotWidget(self, width=4, height=3, dpi=100)
-        self.pltWidget.create_plot(transit_data, sun_alt_graph, start_date, end_date)
+        self.pltWidget.create_plot(transit_data, sun_alt_graph, local_start_date, local_end_date, observer_tz)
 
         layout = QHBoxLayout()
 
@@ -42,8 +45,8 @@ class TransitListWidgetItem(QWidget):
 
         for i in range(0, len(transit_data["transits"])):
             transit = transit_data["transits"][i]
-            start = transit["start"].replace(tzinfo=datetime.timezone.utc).astimezone()
-            end = transit["end"].replace(tzinfo=datetime.timezone.utc).astimezone()
+            start = transit["start"].replace(tzinfo=datetime.timezone.utc).astimezone(observer_tz)
+            end = transit["end"].replace(tzinfo=datetime.timezone.utc).astimezone(observer_tz)
             transit_label = QLabel("Transit: %s - %s" % (start.strftime("%H:%M %d.%m.%Y"), end.strftime("%H:%M %d.%m.%Y")))
             starInfoLayout.addWidget(transit_label)
 
@@ -64,9 +67,9 @@ class TransitListWidget(QWidget):
 
         self.setLayout(layout)
 
-    def addTransit(self, transit_data, sun_alt_graph, start_date, end_date):
+    def addTransit(self, transit_data, sun_alt_graph, start_date, end_date, observer_tz):
         item = QListWidgetItem(self.list_widget)
-        itemWidget = TransitListWidgetItem(transit_data, sun_alt_graph, start_date, end_date)
+        itemWidget = TransitListWidgetItem(transit_data, sun_alt_graph, start_date, end_date, observer_tz)
         item.setSizeHint(itemWidget.sizeHint())
 
         self.list_widget.addItem(item)

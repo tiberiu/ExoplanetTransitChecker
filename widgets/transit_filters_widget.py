@@ -42,8 +42,8 @@ class TransitFiltersWidget(QWidget):
         self.setFixedWidth(300)
         self.setFixedHeight(800)
 
-        self.long_input = InputWidget("Longitude (deg)", "22", QDoubleValidator(-90, 90, 5))
-        self.lat_input = InputWidget("Latitude (deg)", "44", QDoubleValidator(-90, 90, 5))
+        self.long_input = InputWidget("Longitude (deg)", "26.1025", QDoubleValidator(-90, 90, 5))
+        self.lat_input = InputWidget("Latitude (deg)", "44.4268", QDoubleValidator(-90, 90, 5))
         self.elevation_input = InputWidget("Elevation (m)", "75", QIntValidator())
 
         self.max_mag_input = InputWidget("Max Magnitude", "10", QDoubleValidator(0, 99, 2))

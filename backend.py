@@ -1,3 +1,4 @@
+import datetime
 import threading
 import time
 import math
@@ -7,7 +8,9 @@ from astropy.coordinates import SkyCoord, AltAz, EarthLocation, get_sun
 from astropy.time import Time
 from astropy import units
 
-import datetime
+import pytz
+from timezonefinder import TimezoneFinder
+
 
 class BackendThread(threading.Thread):
     def __init__(self, *args, **kwargs):
@@ -111,9 +114,28 @@ class BackendThread(threading.Thread):
 
         return result
 
+    def get_observer_timezone(self, observer_data):
+        tzf = TimezoneFinder()
+        local_tz = pytz.timezone(tzf.timezone_at(lng=observer_data["lon"], lat=observer_data["lat"]))
+
+        return local_tz
+
+    def timezone_transform(self, date, observer_data):
+        local_tz = self.get_observer_timezone(observer_data)
+        local_date = date.astimezone(local_tz).replace(hour=12, minute=0, second=0, microsecond=0)
+
+        # For UTC date we convert it to UTC to apply the timedelta, and after we remove the tzinfo
+        # becase we need it as a naive date in further calculations
+        utc_date = local_date.astimezone(pytz.utc).replace(tzinfo=None)
+
+        return utc_date
+
     def execute_job_internal(self, job):
-        start_hjd = Time(job["start_date"], format='datetime').jd
-        end_hjd = Time(job["end_date"], format='datetime').jd
+        start_date_utc = self.timezone_transform(job["start_date"], job["observer"])
+        end_date_utc = self.timezone_transform(job["end_date"], job["observer"])
+
+        start_hjd = Time(start_date_utc, format='datetime').jd
+        end_hjd = Time(end_date_utc, format='datetime').jd
 
         exoplanets = []
         sun_alt_graph = self.get_sun_alt_graph(job)
@@ -158,10 +180,11 @@ class BackendThread(threading.Thread):
 
             has_valid_transits = False
             for transit in transits:
-                start_min = int((transit["start"] - job["start_date"]).total_seconds() / 60)
+                start_min = int((transit["start"] - start_date_utc).total_seconds() / 60)
                 duration_mins = int(exoplanet["duration"])
-                end_min = int((transit["end"] - job["start_date"]).total_seconds() / 60)
-                end_min = min(end_min, int((job["end_date"] - job["start_date"]).total_seconds() / 60))
+
+                end_min = int((transit["end"] - start_date_utc).total_seconds() / 60)
+                end_min = min(end_min, int((end_date_utc - start_date_utc).total_seconds() / 60))
 
                 max_sun_alt = job["filters"].get("sun_max_altitude", 90)
 
@@ -185,7 +208,8 @@ class BackendThread(threading.Thread):
 
         print("Backend job done")
 
-        return {"exoplanets": exoplanets, "sun_alt_graph": sun_alt_graph, "start_date": job["start_date"], "end_date": job["end_date"]}
+        return {"exoplanets": exoplanets, "sun_alt_graph": sun_alt_graph, "start_date": start_date_utc, "end_date": end_date_utc,
+                "observer_timezone": self.get_observer_timezone(job["observer"])}
 
     def sort_exoplanets(self, exoplanets, order):
         cmp = None
@@ -234,9 +258,11 @@ class BackendThread(threading.Thread):
 
         ras = []
         decs = []
+        cnt = 0
         for exoplanet in exoplanets:
             ra = exoplanet["ra"]
             dec = exoplanet["dec"]
+
             ras.append("%dh%dm%.2fs" % (ra[0], ra[1], ra[2]))
             decs.append("%dd%dm%.2fs" % (dec[0], dec[1], dec[2]))
 
@@ -244,10 +270,13 @@ class BackendThread(threading.Thread):
                                     dec=decs,
                                     unit=(units.hourangle, units.deg), frame='icrs')
 
-        min_count = (job["end_date"] - job["start_date"]).total_seconds() // 60
+        start_date_utc = self.timezone_transform(job["start_date"], job["observer"])
+        end_date_utc = self.timezone_transform(job["end_date"], job["observer"])
+
+        min_count = (end_date_utc - start_date_utc).total_seconds() // 60
         observation_datetimes = []
         for i in range(0, int(min_count)):
-            date = job["start_date"] + datetime.timedelta(minutes=i)
+            date = start_date_utc + datetime.timedelta(minutes=i)
             observation_datetimes.append([date])
 
         observation_times = Time(observation_datetimes, format='datetime')
@@ -270,12 +299,14 @@ class BackendThread(threading.Thread):
                                           lon=job["observer"]["lon"],
                                           height=job["observer"]["height"] * units.m)
 
-        sun_coord = get_sun(Time(job["start_date"], format='datetime'))
+        start_date_utc = self.timezone_transform(job["start_date"], job["observer"])
+        end_date_utc = self.timezone_transform(job["end_date"], job["observer"])
+
+        sun_coord = get_sun(Time(start_date_utc, format='datetime'))
         observation_dtimes = []
-        min_count = (job["end_date"] - job["start_date"]).total_seconds() // 60
+        min_count = (end_date_utc - start_date_utc).total_seconds() // 60
         for i in range(0, int(min_count)):
-            observation_dtimes.append(job["start_date"] + datetime.timedelta(minutes=i))
-        print(min_count)
+            observation_dtimes.append(start_date_utc + datetime.timedelta(minutes=i))
 
         sun_altaz = sun_coord.transform_to(AltAz(obstime=Time(observation_dtimes, format='datetime'),
                                                  location=observer_location))
