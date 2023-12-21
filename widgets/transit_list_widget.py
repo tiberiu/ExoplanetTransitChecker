@@ -6,9 +6,21 @@ from PyQt6.QtGui import QFont
 from widgets.transit_plot_widget import TransitPlotWidget
 import datetime
 
+import urllib
+
+ETD_ROOT = 'http://var2.astro.cz/ETD/'
+ETD_PREDICT_URL = ETD_ROOT + "predict_detail.php"
+
 class TransitListWidgetItem(QWidget):
-    def __init__(self, transit_data, sun_alt_graph, start_date, end_date, observer_tz, *args, **kwargs):
+    def __init__(self, transit_data, result_data, *args, **kwargs):
         super(TransitListWidgetItem, self).__init__(*args, **kwargs)
+
+        start_date = result_data["start_date"]
+        end_date = result_data["end_date"]
+        observer_tz = result_data["observer_timezone"]
+        observer_lon = result_data["observer"]["lon"]
+        observer_lat = result_data["observer"]["lat"]
+        sun_alt_graph = result_data["sun_alt_graph"]
 
         local_start_date = start_date.replace(tzinfo=datetime.timezone.utc).astimezone(observer_tz)
         local_end_date = end_date.replace(tzinfo=datetime.timezone.utc).astimezone(observer_tz)
@@ -43,6 +55,15 @@ class TransitListWidgetItem(QWidget):
         pminutes = (total_seconds - pdays * 86400 - phours * 3600) // 60
         starInfoLayout.addWidget(QLabel("Transit Period: %d days %d hours %d minutes" % (pdays, phours, pminutes)))
 
+        etd_link = ETD_PREDICT_URL + "?" + urllib.parse.urlencode({"STARNAME": transit_data["exoplanet_details"]["star"],
+                                                                   "PLANET": transit_data["exoplanet_details"]["planet"],
+                                                                   'submit': 'submit',
+                                                                   'delka': observer_lon, 'sirka': observer_lat})
+        link_label = QLabel()
+        link_label.setText('<a href="%s">More Details - ETD Link</a>' % etd_link)
+        link_label.setOpenExternalLinks(True)
+        starInfoLayout.addWidget(link_label)
+
         for i in range(0, len(transit_data["transits"])):
             transit = transit_data["transits"][i]
             start = transit["start"].replace(tzinfo=datetime.timezone.utc).astimezone(observer_tz)
@@ -67,9 +88,9 @@ class TransitListWidget(QWidget):
 
         self.setLayout(layout)
 
-    def addTransit(self, transit_data, sun_alt_graph, start_date, end_date, observer_tz):
+    def addTransit(self, transit_data, result_data):
         item = QListWidgetItem(self.list_widget)
-        itemWidget = TransitListWidgetItem(transit_data, sun_alt_graph, start_date, end_date, observer_tz)
+        itemWidget = TransitListWidgetItem(transit_data, result_data)
         item.setSizeHint(itemWidget.sizeHint())
 
         self.list_widget.addItem(item)

@@ -149,7 +149,7 @@ class BackendThread(threading.Thread):
                 self.add_stat("Exoplanets Reject by star", 1)
                 continue
 
-            self.add_stat("Exoplanets Analized", 1)
+            self.add_stat("Exoplanets Analyzed", 1)
 
             x = start_hjd - exoplanet['T0']
             jd_duration = exoplanet["duration"] / 1440
@@ -211,7 +211,7 @@ class BackendThread(threading.Thread):
         print("Backend job done")
 
         return {"exoplanets": exoplanets, "sun_alt_graph": sun_alt_graph, "start_date": start_date_utc, "end_date": end_date_utc,
-                "observer_timezone": self.get_observer_timezone(job["observer"])}
+                "observer_timezone": self.get_observer_timezone(job["observer"]), "observer": job["observer"]}
 
     def sort_exoplanets(self, exoplanets, order):
         cmp = None
