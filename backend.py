@@ -10,7 +10,7 @@ from astropy import units
 
 import pytz
 from timezonefinder import TimezoneFinder
-
+from utils import Timer
 
 class BackendThread(threading.Thread):
     def __init__(self, *args, **kwargs):
@@ -24,6 +24,8 @@ class BackendThread(threading.Thread):
         self.start_time = 0
         self.stats = {}
         self.kill_signal = False
+
+        self.timezone_finder = TimezoneFinder()
 
     def set_frontend_thread(self, frontend_thread):
         self.frontend_thread = frontend_thread
@@ -115,8 +117,7 @@ class BackendThread(threading.Thread):
         return result
 
     def get_observer_timezone(self, observer_data):
-        tzf = TimezoneFinder()
-        local_tz = pytz.timezone(tzf.timezone_at(lng=observer_data["lon"], lat=observer_data["lat"]))
+        local_tz = pytz.timezone(self.timezone_finder.timezone_at(lng=observer_data["lon"], lat=observer_data["lat"]))
 
         return local_tz
 
@@ -138,6 +139,7 @@ class BackendThread(threading.Thread):
         end_hjd = Time(end_date_utc, format='datetime').jd
 
         exoplanets = []
+
         sun_alt_graph = self.get_sun_alt_graph(job)
 
         exoplanets_to_plot = []
@@ -213,13 +215,11 @@ class BackendThread(threading.Thread):
 
     def sort_exoplanets(self, exoplanets, order):
         cmp = None
-        print(exoplanets)
         if order == "Magnitude":
             cmp = lambda item: item["exoplanet_details"]["mag"]
         elif order == "Transit depth":
             cmp = lambda item: 1 - item["exoplanet_details"]["transit_dv"]
         else:
-            print("No sorting")
             return exoplanets
 
         exoplanets = sorted(exoplanets, key=cmp)
@@ -270,25 +270,20 @@ class BackendThread(threading.Thread):
                                     dec=decs,
                                     unit=(units.hourangle, units.deg), frame='icrs')
 
+
         start_date_utc = self.timezone_transform(job["start_date"], job["observer"])
         end_date_utc = self.timezone_transform(job["end_date"], job["observer"])
-
-        min_count = (end_date_utc - start_date_utc).total_seconds() // 60
-        observation_datetimes = []
-        for i in range(0, int(min_count)):
-            date = start_date_utc + datetime.timedelta(minutes=i)
-            observation_datetimes.append([date])
+        observation_datetimes = np.arange(start_date_utc, end_date_utc, datetime.timedelta(minutes=1)).astype(
+            datetime.datetime).reshape(-1, 1)
 
         observation_times = Time(observation_datetimes, format='datetime')
 
         # Transform the equatorial coordinates to Altitude/Azimuth for the observer's location and time
-        start_time = time.time()
         altaz_coordinates = star_coordinates.transform_to(AltAz(obstime=observation_times, location=observer_location))
-        print("AltAz computation: %.2f" % (time.time() - start_time))
 
         graphs = []
         for ex_id in range(0, len(exoplanets)):
-            x = np.arange(0, min_count)
+            x = np.arange(0, altaz_coordinates.shape[0])
             y = altaz_coordinates[:,ex_id].alt.value
             graphs.append({"x": x, "y": y})
 
@@ -303,18 +298,14 @@ class BackendThread(threading.Thread):
         end_date_utc = self.timezone_transform(job["end_date"], job["observer"])
 
         sun_coord = get_sun(Time(start_date_utc, format='datetime'))
-        observation_dtimes = []
-        min_count = (end_date_utc - start_date_utc).total_seconds() // 60
-        for i in range(0, int(min_count)):
-            observation_dtimes.append(start_date_utc + datetime.timedelta(minutes=i))
+        observation_datetimes = np.arange(start_date_utc, end_date_utc, datetime.timedelta(minutes=1)).astype(
+            datetime.datetime)
 
-        sun_altaz = sun_coord.transform_to(AltAz(obstime=Time(observation_dtimes, format='datetime'),
+        sun_altaz = sun_coord.transform_to(AltAz(obstime=Time(observation_datetimes, format='datetime'),
                                                  location=observer_location))
 
-        x = []
-        y = []
-        for i in range(0, int(min_count)):
-            x.append(i)
-            y.append((sun_altaz[i].alt * units.deg).value)
+        x = np.arange(0, sun_altaz.shape[0])
+        y = sun_altaz.alt.value
+
 
         return {"x": x, "y": y}

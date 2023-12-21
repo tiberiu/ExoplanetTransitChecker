@@ -4,6 +4,8 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QProgress
 from widgets.transit_list_widget import TransitListWidget
 from widgets.day_selector_widget import DaySelectorWidget
 
+from utils import Timer
+
 class TransitSelectorInfoWidget(QWidget):
     def __init__(self, *args, **kwargs):
         super(TransitSelectorInfoWidget, self).__init__(*args, **kwargs)
@@ -50,8 +52,11 @@ class TransitSelectorWidget(QWidget):
     def refresh_transits(self, data):
         self.transit_list_widget.clearTransits()
 
-        for body_transition in data["exoplanets"]:
-            self.transit_list_widget.addTransit(body_transition, data["sun_alt_graph"], data["start_date"], data["end_date"], data["observer_timezone"])
+        with Timer("Adding transits"):
+            for i in range(0, len(data["exoplanets"])):
+                body_transition = data["exoplanets"][i]
+                self.transit_list_widget.addTransit(body_transition, data["sun_alt_graph"], data["start_date"], data["end_date"], data["observer_timezone"])
+                self.update_info_data({'progress': 70 + 30 * (i / len(data["exoplanets"])), 'info': "Generating Plots"})
 
     def get_selected_date(self):
         return self.day_selector_widget.get_selected_date()

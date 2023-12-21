@@ -34,6 +34,26 @@ class TransitPlotWidget(FigureCanvasQTAgg):
 
         return color
 
+    def build_patch_collection(self, sky_colors):
+        rectangles = []
+        rectangle_colors = []
+        crt_rect_start = 0
+        for i in range(0, len(sky_colors)):
+            if abs(sky_colors[i] - sky_colors[crt_rect_start]) > 0.001:
+                rectangles.append(Rectangle((crt_rect_start, -90), i - crt_rect_start, 180))
+                rectangle_colors.append(sky_colors[crt_rect_start])
+                crt_rect_start = i
+
+        rectangles.append(Rectangle((crt_rect_start, -90), len(sky_colors) - crt_rect_start, 180))
+        rectangle_colors.append(sky_colors[crt_rect_start])
+
+        sky_color_map = LinearSegmentedColormap.from_list("sky", [(173 / 255, 216 / 255, 230 / 255), (5 / 255, 5 / 255, 35 / 255)])
+        patch_collection = PatchCollection(rectangles, cmap=sky_color_map)
+        patch_collection.set_array(rectangle_colors)
+
+        return patch_collection
+
+
     def create_plot(self, transit_data, sun_alt_graph, start_date, end_date, observer_tz):
         x = transit_data["alt_graph"]["x"]
         y = transit_data["alt_graph"]["y"]
@@ -43,6 +63,7 @@ class TransitPlotWidget(FigureCanvasQTAgg):
         colors = []
         patches = []
         patch_colors = []
+        sky_colors = []
         for i in range(1, len(x)):
             segments.append([(x[i - 1], y[i - 1]), (x[i], y[i])])
 
@@ -60,15 +81,15 @@ class TransitPlotWidget(FigureCanvasQTAgg):
             else:
                 colors.append("blue")
 
+            sky_colors.append(1 - self.get_sky_color(sun_alt_graph["y"][i])[1])
+
             patches.append(Rectangle((i, -90), 1, 180))
             patch_colors.append(1 - self.get_sky_color(sun_alt_graph["y"][i])[1])
 
-        sky_color = LinearSegmentedColormap.from_list("sky", [(173 / 255, 216 / 255, 230 / 255), (5 / 255, 5 / 255, 35 / 255)])
-        patch_collection = PatchCollection(patches, cmap=sky_color)
-        patch_collection.set_array(patch_colors)
+
         lc = LineCollection(segments, colors=colors)
         self.axes.add_collection(lc)
-        self.axes.add_collection(patch_collection)
+        self.axes.add_collection(self.build_patch_collection(sky_colors))
         self.axes.set_ylim(0, 90)
         self.axes.set_xlim(0, 1440)
         self.axes.xaxis.set_major_formatter(TimeFormatter(start_date))
