@@ -94,6 +94,7 @@ class TransitPlotWidget(FigureCanvasQTAgg):
         self.axes.set_xlim(0, 1440)
         self.axes.xaxis.set_major_formatter(TimeFormatter(start_date))
         self.axes.xaxis.set_ticks(np.arange(0, 1440, 60))
+        self.axes.yaxis.set_ticks(np.arange(0, 100, 10))
         self.axes.tick_params(axis='x', labelrotation=45)
 
         self.fig.tight_layout()
